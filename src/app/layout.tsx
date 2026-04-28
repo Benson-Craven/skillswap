@@ -1,13 +1,10 @@
 import './globals.css';
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
 import { AuthProvider } from '@/lib/context/AuthContext';
 
-const inter = Inter({ subsets: ['latin'] });
-
 export const metadata: Metadata = {
-  title: 'SkillSwap - Exchange Skills with Fellow Travellers',
-  description: 'Connect with locals and travellers to swap skills and experiences',
+  title: 'SkillSwap | Your next skill starts here',
+  description: 'Find people nearby who can help you learn, practise, and share useful skills.',
 }
 
 
@@ -18,8 +15,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
-        <div className="min-h-screen bg-gray-50">
+      <body>
+        <div className="brand-shell">
           <AuthProvider>
             {children}
           </AuthProvider>

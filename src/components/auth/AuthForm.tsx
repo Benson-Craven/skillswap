@@ -4,6 +4,8 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useAuth } from '@/lib/context/AuthContext'
+import { ArrowRight, LockKeyhole, Mail, UserRound } from 'lucide-react'
 
 interface AuthFormProps {
   mode: 'login' | 'signup'
@@ -13,178 +15,246 @@ export default function AuthForm({ mode }: AuthFormProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [fullName, setFullName] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   
   const router = useRouter()
-  const supabase = createClient()
+  const { loading: authLoading } = useAuth()
+  const [supabase] = useState(() => createClient())
+
+  const loading = authLoading || submitting
+  const isSignup = mode === 'signup'
+
+  const isSupabaseLockError = (error: unknown) =>
+    error instanceof Error &&
+    error.message.includes('auth-token') &&
+    error.message.includes('stole it')
+
+  const wait = (ms: number) =>
+    new Promise((resolve) => {
+      setTimeout(resolve, ms)
+    })
+
+  const runWithAuthRetry = async <T,>(operation: () => Promise<T>) => {
+    try {
+      return await operation()
+    } catch (error) {
+      if (!isSupabaseLockError(error)) {
+        throw error
+      }
+
+      await wait(150)
+      return operation()
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
+    if (loading) return
+
+    setSubmitting(true)
     setError(null)
     setMessage(null)
 
-    console.log('Form submitted with:', { email, mode })
-
     try {
       if (mode === 'signup') {
-        console.log('Attempting signup...')
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              full_name: fullName,
-            }
-          }
+        const response = await fetch('/api/auth/signup', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email,
+            password,
+            fullName,
+          }),
         })
 
-        console.log('Signup result:', { data, error })
+        const result = await response.json()
 
-        if (error) throw error
+        if (!response.ok) {
+          throw new Error(
+            typeof result.error === 'string'
+              ? result.error
+              : 'Unable to create account. Please try again.'
+          )
+        }
 
-        if (data.user && !data.user.email_confirmed_at) {
+        if (result.requiresEmailConfirmation) {
           setMessage('Check your email for the confirmation link!')
         } else {
-          console.log('Redirecting to dashboard after signup...')
-          router.push('/dashboard')
+          router.replace('/dashboard')
+          router.refresh()
         }
       } else {
-        console.log('Attempting login...')
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        })
-
-        console.log('Login result:', { data, error })
+        const { error } = await runWithAuthRetry(() =>
+          supabase.auth.signInWithPassword({
+            email,
+            password,
+          })
+        )
 
         if (error) throw error
 
-        console.log('Login successful, redirecting to dashboard...')
-        router.push('/dashboard')
+        router.replace('/dashboard')
         router.refresh()
       }
-    } catch (error: any) {
-      console.error('Auth error:', error)
-      setError(error.message)
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Something went wrong. Please try again.')
     } finally {
-      setLoading(false)
+      setSubmitting(false)
     }
   }
 
   const handleGoogleAuth = async () => {
-    setLoading(true)
+    if (loading) return
+
+    setSubmitting(true)
     setError(null)
 
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`
-        }
-      })
+      const { error } = await runWithAuthRetry(() =>
+        supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: `${window.location.origin}/auth/callback`
+          }
+        })
+      )
 
       if (error) throw error
-    } catch (error: any) {
-      setError(error.message)
-      setLoading(false)
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Something went wrong. Please try again.')
+      setSubmitting(false)
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            {mode === 'login' ? 'Sign in to your account' : 'Create your account'}
+    <div className="brand-container grid min-h-screen items-center gap-10 py-10 lg:grid-cols-[0.92fr_1.08fr]">
+      <aside className="hidden lg:block">
+        <Link href="/" className="text-2xl font-black text-[var(--brand-ink)]">
+          SkillSwap
+        </Link>
+        <p className="brand-kicker mt-14">{isSignup ? 'Start swapping' : 'Welcome back'}</p>
+        <h1 className="mt-4 max-w-xl text-6xl font-black leading-[0.96] text-[var(--brand-ink)]">
+          {isSignup ? 'Your next skill starts here' : "Let's get you connected"}
+        </h1>
+        <p className="mt-6 max-w-lg text-lg font-medium leading-8 text-[var(--brand-muted)]">
+          {isSignup
+            ? 'Create a profile, list what you can teach, and discover people ready to trade knowledge.'
+            : 'Pick up where you left off and keep building your learning network.'}
+        </p>
+        <div className="mt-8 grid max-w-lg grid-cols-2 gap-3">
+          {['Career skills', 'Creative practice', 'Language swaps', 'Local know-how'].map((label) => (
+            <span key={label} className="brand-pill px-4 py-3 text-sm">
+              {label}
+            </span>
+          ))}
+        </div>
+      </aside>
+
+      <div className="w-full max-w-md justify-self-center">
+        <div className="mb-8 flex items-center justify-between lg:hidden">
+          <Link href="/" className="text-2xl font-black text-[var(--brand-ink)]">
+            SkillSwap
+          </Link>
+        </div>
+
+        <div className="brand-card p-6 sm:p-8">
+          <p className="brand-kicker">{isSignup ? 'Create account' : 'Log in'}</p>
+          <h2 className="mt-3 text-3xl font-black leading-tight text-[var(--brand-ink)]">
+            {mode === 'login' ? 'Sign in to SkillSwap' : 'Join the skill network'}
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
+          <p className="mt-3 text-sm font-medium text-[var(--brand-muted)]">
             {mode === 'login' ? (
               <>
-                Or{' '}
-                <Link href="/auth/signup" className="font-medium text-blue-600 hover:text-blue-500">
-                  create a new account
+                New here?{' '}
+                <Link href="/auth/signup" className="font-extrabold text-[var(--brand-blue)] hover:text-[var(--brand-blue-dark)]">
+                  Create an account
                 </Link>
               </>
             ) : (
               <>
-                Or{' '}
-                <Link href="/auth/login" className="font-medium text-blue-600 hover:text-blue-500">
-                  sign in to existing account
+                Already have an account?{' '}
+                <Link href="/auth/login" className="font-extrabold text-[var(--brand-blue)] hover:text-[var(--brand-blue-dark)]">
+                  Log in
                 </Link>
               </>
             )}
           </p>
-        </div>
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="rounded-md shadow-sm -space-y-px">
+        <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
             {mode === 'signup' && (
               <div>
-                <label htmlFor="fullName" className="sr-only">
+                <label htmlFor="fullName" className="brand-label">
                   Full name
                 </label>
+                <div className="relative">
+                  <UserRound className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[var(--brand-muted)]" />
                 <input
                   id="fullName"
                   name="fullName"
                   type="text"
                   required
-                  className="relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                    className="brand-input px-12 py-3.5 text-base"
                   placeholder="Full name"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                 />
               </div>
+              </div>
             )}
             
             <div>
-              <label htmlFor="email" className="sr-only">
+              <label htmlFor="email" className="brand-label">
                 Email address
               </label>
+              <div className="relative">
+                <Mail className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[var(--brand-muted)]" />
               <input
                 id="email"
                 name="email"
                 type="email"
                 autoComplete="email"
                 required
-                className={`relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 ${
-                  mode === 'signup' ? 'rounded-none' : 'rounded-t-md'
-                } focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm`}
+                  className="brand-input px-12 py-3.5 text-base"
                 placeholder="Email address"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
+            </div>
             
             <div>
-              <label htmlFor="password" className="sr-only">
+              <label htmlFor="password" className="brand-label">
                 Password
               </label>
+              <div className="relative">
+                <LockKeyhole className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[var(--brand-muted)]" />
               <input
                 id="password"
                 name="password"
                 type="password"
-                autoComplete="current-password"
+                  autoComplete={isSignup ? 'new-password' : 'current-password'}
                 required
-                className="relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                  className="brand-input px-12 py-3.5 text-base"
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
-          </div>
+            </div>
 
           {error && (
-            <div className="rounded-md bg-red-50 p-4">
-              <div className="text-sm text-red-700">{error}</div>
+            <div className="rounded-[8px] border border-red-200 bg-red-50 p-4">
+              <div className="text-sm font-semibold text-red-700">{error}</div>
             </div>
           )}
 
           {message && (
-            <div className="rounded-md bg-green-50 p-4">
-              <div className="text-sm text-green-700">{message}</div>
+            <div className="rounded-[8px] border border-green-200 bg-green-50 p-4">
+              <div className="text-sm font-semibold text-green-800">{message}</div>
             </div>
           )}
 
@@ -192,19 +262,20 @@ export default function AuthForm({ mode }: AuthFormProps) {
             <button
               type="submit"
               disabled={loading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="brand-button-primary w-full px-5 py-3.5 text-base disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {loading ? 'Loading...' : mode === 'login' ? 'Sign in' : 'Sign up'}
+                {loading ? 'Loading...' : mode === 'login' ? 'Sign in' : 'Create account'}
+                {!loading && <ArrowRight className="h-5 w-5" />}
             </button>
           </div>
 
           <div className="mt-6">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300" />
+                  <div className="w-full border-t border-[var(--brand-border)]" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-gray-50 text-gray-500">Or continue with</span>
+                  <span className="bg-[var(--brand-surface)] px-3 font-bold text-[var(--brand-muted)]">Or continue with</span>
               </div>
             </div>
 
@@ -213,7 +284,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
                 type="button"
                 onClick={handleGoogleAuth}
                 disabled={loading}
-                className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="brand-button-secondary w-full px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
                   <path
@@ -238,6 +309,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
             </div>
           </div>
         </form>
+        </div>
       </div>
     </div>
   )

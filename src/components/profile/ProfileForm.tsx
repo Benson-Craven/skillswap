@@ -1,14 +1,16 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '@/lib/context/AuthContext'
 import { createClient } from '@/lib/supabase/client'
 import { Database } from '@/lib/supabase/types'
 import { useRouter } from 'next/navigation'
+import { ArrowLeft, ArrowRight, Check, GraduationCap, Sparkles, UserRound } from 'lucide-react'
 
 // Type definitions for better TypeScript support
 type Skill = Database['public']['Tables']['skills']['Row']
 type ProfileInsert = Database['public']['Tables']['profiles']['Insert']
+type UserSkillSelection = Pick<Database['public']['Tables']['user_skills_offered']['Row'], 'skill_id'>
 
 interface ProfileFormProps {
   mode: 'create' | 'edit'
@@ -32,9 +34,43 @@ export default function ProfileForm({ mode, onComplete }: ProfileFormProps) {
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'basic' | 'skills'>('basic')
 
-  const { user, profile } = useAuth()
-  const supabase = createClient()
+  const { user, profile, refreshProfile } = useAuth()
+  const [supabase] = useState(() => createClient())
   const router = useRouter()
+
+  const fetchSkills = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('skills')
+      .select('*')
+      .order('name')
+
+    if (error) {
+      console.error('Error fetching skills:', error)
+    } else {
+      setAvailableSkills(data || [])
+    }
+  }, [supabase])
+
+  const fetchUserSkills = useCallback(async () => {
+    if (!user) return
+
+    // Fetch skills the user offers
+    const { data: offeredSkills } = await supabase
+      .from('user_skills_offered')
+      .select('skill_id')
+      .eq('user_id', user.id)
+
+    const { data: wantedSkills } = await supabase
+      .from('user_skills_wanted')
+      .select('skill_id')
+      .eq('user_id', user.id)
+
+    const offeredRows = (offeredSkills || []) as UserSkillSelection[]
+    const wantedRows = (wantedSkills || []) as UserSkillSelection[]
+
+    setSkillsOffered(offeredRows.map((skill) => skill.skill_id).filter((id): id is number => Boolean(id)))
+    setSkillsWanted(wantedRows.map((skill) => skill.skill_id).filter((id): id is number => Boolean(id)))
+  }, [supabase, user])
 
   // Load available skills on component mount
   useEffect(() => {
@@ -47,39 +83,7 @@ export default function ProfileForm({ mode, onComplete }: ProfileFormProps) {
       setLocation(profile.location || '')
       fetchUserSkills()
     }
-  }, [mode, profile])
-
-  const fetchSkills = async () => {
-    const { data, error } = await supabase
-      .from('skills')
-      .select('*')
-      .order('name')
-
-    if (error) {
-      console.error('Error fetching skills:', error)
-    } else {
-      setAvailableSkills(data || [])
-    }
-  }
-
-  const fetchUserSkills = async () => {
-    if (!user) return
-
-    // Fetch skills the user offers
-    const { data: offeredSkills } = await supabase
-      .from('user_skills_offered')
-      .select('skill_id')
-      .eq('user_id', user.id)
-
-    // Fetch skills the user wants
-    const { data: wantedSkills } = await supabase
-      .from('user_skills_wanted')
-      .select('skill_id')
-      .eq('user_id', user.id)
-
-    setSkillsOffered(offeredSkills?.map(s => s.skill_id!).filter(Boolean) || [])
-    setSkillsWanted(wantedSkills?.map(s => s.skill_id!).filter(Boolean) || [])
-  }
+  }, [fetchSkills, fetchUserSkills, mode, profile])
 
   const handleSkillToggle = (skillId: number, type: 'offered' | 'wanted') => {
     if (type === 'offered') {
@@ -160,15 +164,16 @@ export default function ProfileForm({ mode, onComplete }: ProfileFormProps) {
         if (wantedError) throw wantedError
       }
 
-      // Success! Handle completion
+      await refreshProfile()
+
       if (onComplete) {
         onComplete()
       } else {
         router.push('/dashboard')
       }
 
-    } catch (error: any) {
-      setError(error.message)
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Unable to save your profile. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -183,35 +188,42 @@ export default function ProfileForm({ mode, onComplete }: ProfileFormProps) {
   }, {} as Record<string, Skill[]>)
 
   return (
-    <div className="max-w-2xl mx-auto p-6">
-      <div className="bg-white rounded-lg shadow-md">
-        <div className="p-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">
-            {mode === 'create' ? 'Complete Your Profile' : 'Edit Profile'}
+    <div className="brand-container py-8">
+      <div className="mx-auto max-w-3xl">
+        <div className="mb-8">
+          <p className="brand-kicker">{mode === 'create' ? 'Set up your profile' : 'Refresh your profile'}</p>
+          <h2 className="mt-3 text-4xl font-black leading-tight text-[var(--brand-ink)] sm:text-5xl">
+            {mode === 'create' ? 'Tell people what you can swap' : 'Keep your skill profile current'}
           </h2>
+          <p className="mt-4 max-w-2xl text-lg font-medium leading-8 text-[var(--brand-muted)]">
+            A clear profile helps the right people understand what you can teach, what you want to learn, and how to start a useful exchange.
+          </p>
+        </div>
 
-          {/* Tab Navigation */}
-          <div className="flex border-b mb-6">
+        <div className="brand-card p-5 sm:p-8">
+          <div className="mb-8 grid grid-cols-2 gap-3 rounded-[8px] bg-[#f2ede4] p-1.5">
             <button
               type="button"
               onClick={() => setActiveTab('basic')}
-              className={`px-4 py-2 font-medium text-sm border-b-2 ${
+              className={`inline-flex items-center justify-center gap-2 rounded-[8px] px-4 py-3 text-sm font-black transition-colors ${
                 activeTab === 'basic'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
+                  ? 'bg-white text-[var(--brand-ink)] shadow-sm'
+                  : 'text-[var(--brand-muted)] hover:text-[var(--brand-ink)]'
               }`}
             >
-              Basic Info
+              <UserRound className="h-4 w-4" />
+              Basics
             </button>
             <button
               type="button"
               onClick={() => setActiveTab('skills')}
-              className={`px-4 py-2 font-medium text-sm border-b-2 ml-8 ${
+              className={`inline-flex items-center justify-center gap-2 rounded-[8px] px-4 py-3 text-sm font-black transition-colors ${
                 activeTab === 'skills'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
+                  ? 'bg-white text-[var(--brand-ink)] shadow-sm'
+                  : 'text-[var(--brand-muted)] hover:text-[var(--brand-ink)]'
               }`}
             >
+              <Sparkles className="h-4 w-4" />
               Skills
             </button>
           </div>
@@ -220,8 +232,8 @@ export default function ProfileForm({ mode, onComplete }: ProfileFormProps) {
             {activeTab === 'basic' && (
               <div className="space-y-6">
                 <div>
-                  <label htmlFor="fullName" className="block text-sm font-medium text-gray-500 mb-1">
-                    Full Name *
+                  <label htmlFor="fullName" className="brand-label">
+                    Full name *
                   </label>
                   <input
                     type="text"
@@ -229,13 +241,13 @@ export default function ProfileForm({ mode, onComplete }: ProfileFormProps) {
                     required
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    className="w-full text-gray-600 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="brand-input px-4 py-3.5"
                     placeholder="Your full name"
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="username" className="block text-sm font-medium text-gray-500 mb-1">
+                  <label htmlFor="username" className="brand-label">
                     Username
                   </label>
                   <input
@@ -243,13 +255,13 @@ export default function ProfileForm({ mode, onComplete }: ProfileFormProps) {
                     id="username"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    className="text-gray-600 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Choose a unique username"
+                    className="brand-input px-4 py-3.5"
+                    placeholder="Choose a handle people can remember"
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="location" className="block text-sm font-medium text-gray-500 mb-1">
+                  <label htmlFor="location" className="brand-label">
                     Location
                   </label>
                   <input
@@ -257,13 +269,13 @@ export default function ProfileForm({ mode, onComplete }: ProfileFormProps) {
                     id="location"
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
-                    className="text-gray-600 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="brand-input px-4 py-3.5"
                     placeholder="City, Country"
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="bio" className="block text-sm font-medium text-gray-500 mb-1">
+                  <label htmlFor="bio" className="brand-label">
                     Bio
                   </label>
                   <textarea
@@ -271,8 +283,8 @@ export default function ProfileForm({ mode, onComplete }: ProfileFormProps) {
                     rows={4}
                     value={bio}
                     onChange={(e) => setBio(e.target.value)}
-                    className="text-gray-600 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Tell others about yourself, your interests, and what you're looking for..."
+                    className="brand-input px-4 py-3.5"
+                    placeholder="Share what you are into, what you can help with, and what you want to practise next..."
                   />
                 </div>
               </div>
@@ -280,30 +292,37 @@ export default function ProfileForm({ mode, onComplete }: ProfileFormProps) {
 
             {activeTab === 'skills' && (
               <div className="space-y-8">
-                {/* Skills I Can Offer */}
                 <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">
-                    Skills I Can Offer
+                  <div className="mb-4 flex items-start gap-3">
+                    <div className="rounded-full bg-[var(--brand-mint)] p-2 text-[var(--brand-ink)]">
+                      <GraduationCap className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-black text-[var(--brand-ink)]">
+                        Skills I can offer
                   </h3>
-                  <p className="text-sm text-gray-600 mb-4">
-                    Select the skills you can teach or help others with
+                      <p className="mt-1 text-sm font-medium text-[var(--brand-muted)]">
+                        Choose the things you can teach, review, practise, or explain.
                   </p>
+                    </div>
+                  </div>
                   
                   {Object.entries(skillsByCategory).map(([category, skills]) => (
                     <div key={category} className="mb-6">
-                      <h4 className="font-medium text-gray-800 mb-2 ">{category}</h4>
-                      <div className="flex flex-wrap gap-2">
+                      <h4 className="mb-2 text-sm font-black uppercase text-[var(--brand-muted)]">{category}</h4>
+                      <div className="flex flex-wrap gap-2.5">
                         {skills.map(skill => (
                           <button
                             key={`offered-${skill.id}`}
                             type="button"
                             onClick={() => handleSkillToggle(skill.id, 'offered')}
-                            className={`px-3 py-1 rounded-full text-sm border transition-colors hover:cursor-pointer ${
+                            className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-extrabold transition-colors hover:cursor-pointer ${
                               skillsOffered.includes(skill.id)
-                                ? 'bg-green-100 border-green-500 text-green-800'
-                                : 'bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200'
+                                ? 'border-[var(--brand-ink)] bg-[var(--brand-lime)] text-[var(--brand-ink)]'
+                                : 'border-[var(--brand-border)] bg-white text-[var(--brand-muted)] hover:border-[var(--brand-ink)] hover:text-[var(--brand-ink)]'
                             }`}
                           >
+                            {skillsOffered.includes(skill.id) && <Check className="h-4 w-4" />}
                             {skill.name}
                           </button>
                         ))}
@@ -312,30 +331,37 @@ export default function ProfileForm({ mode, onComplete }: ProfileFormProps) {
                   ))}
                 </div>
 
-                {/* Skills I Want to Learn */}
                 <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">
-                    Skills I Want to Learn
+                  <div className="mb-4 flex items-start gap-3">
+                    <div className="rounded-full bg-[var(--brand-yellow)] p-2 text-[var(--brand-ink)]">
+                      <Sparkles className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-black text-[var(--brand-ink)]">
+                        Skills I want to learn
                   </h3>
-                  <p className="text-sm text-gray-600 mb-4">
-                    Select the skills you'd like to learn from others
+                      <p className="mt-1 text-sm font-medium text-[var(--brand-muted)]">
+                        Pick the topics you would like someone else to help you with.
                   </p>
+                    </div>
+                  </div>
                   
                   {Object.entries(skillsByCategory).map(([category, skills]) => (
                     <div key={category} className="mb-6">
-                      <h4 className="font-medium text-gray-800 mb-2">{category}</h4>
-                      <div className="flex flex-wrap gap-2">
+                      <h4 className="mb-2 text-sm font-black uppercase text-[var(--brand-muted)]">{category}</h4>
+                      <div className="flex flex-wrap gap-2.5">
                         {skills.map(skill => (
                           <button
                             key={`wanted-${skill.id}`}
                             type="button"
                             onClick={() => handleSkillToggle(skill.id, 'wanted')}
-                            className={`px-3 py-1 rounded-full text-sm border transition-colors hover:cursor-pointer ${
+                            className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-extrabold transition-colors hover:cursor-pointer ${
                               skillsWanted.includes(skill.id)
-                                ? 'bg-blue-100 border-blue-500 text-blue-800'
-                                : 'bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200'
+                                ? 'border-[var(--brand-blue)] bg-[rgba(10,102,255,0.1)] text-[var(--brand-blue)]'
+                                : 'border-[var(--brand-border)] bg-white text-[var(--brand-muted)] hover:border-[var(--brand-ink)] hover:text-[var(--brand-ink)]'
                             }`}
                           >
+                            {skillsWanted.includes(skill.id) && <Check className="h-4 w-4" />}
                             {skill.name}
                           </button>
                         ))}
@@ -347,38 +373,40 @@ export default function ProfileForm({ mode, onComplete }: ProfileFormProps) {
             )}
 
             {error && (
-              <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-md">
-                <p className="text-sm text-red-600">{error}</p>
+              <div className="mt-4 rounded-[8px] border border-red-200 bg-red-50 p-4">
+                <p className="text-sm font-semibold text-red-700">{error}</p>
               </div>
             )}
 
-            <div className="mt-8 flex justify-between">
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-between">
               {activeTab === 'skills' && (
                 <button
                   type="button"
                   onClick={() => setActiveTab('basic')}
-                  className="px-4 py-2 text-gray-600 hover:text-gray-800 hover:cursor-pointer"
+                  className="brand-button-secondary px-5 py-3 text-sm hover:cursor-pointer"
                 >
-                  ← Back to Basic Info
+                  <ArrowLeft className="h-4 w-4" />
+                  Back to basics
                 </button>
               )}
               
-              <div className="flex space-x-4 ml-auto">
+              <div className="ml-auto flex">
                 {activeTab === 'basic' ? (
                   <button
                     type="button"
                     onClick={() => setActiveTab('skills')}
-                    className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors hover:cursor-pointer"
+                    className="brand-button-primary px-6 py-3 text-sm hover:cursor-pointer"
                   >
-                    Next: Skills →
+                    Next: skills
+                    <ArrowRight className="h-4 w-4" />
                   </button>
                 ) : (
                   <button
                     type="submit"
                     disabled={loading}
-                    className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="brand-button-primary px-6 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {loading ? 'Saving...' : mode === 'create' ? 'Complete Profile' : 'Update Profile'}
+                    {loading ? 'Saving...' : mode === 'create' ? 'Complete profile' : 'Update profile'}
                   </button>
                 )}
               </div>

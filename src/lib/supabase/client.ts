@@ -1,4 +1,11 @@
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
-import { Database } from "./types";
 
-export const createClient = () => createClientComponentClient<Database>()
+let browserClient: ReturnType<typeof createClientComponentClient> | null = null
+
+export const createClient = () => {
+  if (!browserClient) {
+    browserClient = createClientComponentClient()
+  }
+
+  return browserClient
+}
