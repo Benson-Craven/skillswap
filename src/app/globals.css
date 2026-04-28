@@ -7,28 +7,30 @@
   --brand-muted: #5c6272;
   --brand-blue: #0a66ff;
   --brand-blue-dark: #084fc4;
+  --brand-blue-soft: rgba(10, 102, 255, 0.1);
   --brand-lime: #d7ff57;
   --brand-mint: #c8f6df;
   --brand-coral: #ff9d7a;
   --brand-yellow: #ffe68a;
   --brand-cream: #fbf7ef;
+  --brand-panel: #f2ede4;
   --brand-surface: #fffdf8;
   --brand-border: #ded7ca;
   --brand-shadow: 0 18px 48px rgba(16, 20, 38, 0.1);
   --radius-card: 8px;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
   letter-spacing: 0;
 }
 
@@ -47,7 +49,11 @@ textarea {
 .brand-shell {
   min-height: 100vh;
   background:
-    radial-gradient(circle at 16% 12%, rgba(255, 230, 138, 0.55), transparent 24rem),
+    radial-gradient(
+      circle at 16% 12%,
+      rgba(255, 230, 138, 0.55),
+      transparent 24rem
+    ),
     linear-gradient(180deg, #fffdf8 0%, var(--brand-cream) 56%, #f4efe5 100%);
 }
 
@@ -95,7 +101,10 @@ textarea {
   background: var(--brand-blue);
   color: #ffffff;
   font-weight: 800;
-  transition: background 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+  transition:
+    background 160ms ease,
+    transform 160ms ease,
+    box-shadow 160ms ease;
   box-shadow: 0 12px 24px rgba(10, 102, 255, 0.24);
 }
 
@@ -114,7 +123,10 @@ textarea {
   background: #ffffff;
   color: var(--brand-ink);
   font-weight: 800;
-  transition: border-color 160ms ease, transform 160ms ease, background 160ms ease;
+  transition:
+    border-color 160ms ease,
+    transform 160ms ease,
+    background 160ms ease;
 }
 
 .brand-button-secondary:hover {
@@ -130,7 +142,9 @@ textarea {
   background: #ffffff;
   color: var(--brand-ink);
   outline: none;
-  transition: border-color 160ms ease, box-shadow 160ms ease;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
 }
 
 .brand-input::placeholder {

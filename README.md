@@ -1,36 +1,90 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SkillSwap
+
+SkillSwap is a Next.js app for finding people nearby who can teach, practise, and exchange useful skills. The product direction is a warm career-network experience inspired by Handshake: bold editorial copy, bright action colours, rounded pill controls, and clean cards for repeatable surfaces.
+
+## Tech Stack
+
+- Next.js 15 App Router
+- React 19
+- TypeScript
+- Tailwind CSS 4
+- Supabase auth and data
+- Lucide React icons
 
 ## Getting Started
 
-First, run the development server:
+Install dependencies:
+
+```bash
+npm install
+```
+
+Run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000). If port `3000` is busy, Next will print the alternate local URL.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Verification
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Run a production build:
 
-## Learn More
+```bash
+npm run build
+```
 
-To learn more about Next.js, take a look at the following resources:
+Run TypeScript checks:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npx tsc --noEmit
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Design System
 
-## Deploy on Vercel
+The shared design structure lives in `src/app/globals.css`.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Core tokens:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Background: warm ivory `#fbf7ef`
+- Text: deep ink `#101426`
+- Primary action: cobalt `#0a66ff`
+- Accent colours: lime `#d7ff57`, mint `#c8f6df`, coral `#ff9d7a`, yellow `#ffe68a`
+- Cards: 8px radius, soft borders, subtle shadow
+- Controls: pill-shaped primary and secondary buttons
+
+Reusable classes:
+
+- `brand-shell`
+- `brand-container`
+- `brand-nav`
+- `brand-card`
+- `brand-card-flat`
+- `brand-pill`
+- `brand-button-primary`
+- `brand-button-secondary`
+- `brand-input`
+- `brand-label`
+- `brand-kicker`
+
+Use these primitives for new pages before introducing one-off styling.
+
+## Key Routes
+
+- `/` - public landing page
+- `/auth/signup` - account creation
+- `/auth/login` - sign in
+- `/dashboard` - authenticated home
+- `/profile/setup` - profile and skills onboarding
+
+## Product Voice
+
+Keep language direct, optimistic, and practical. Prefer phrases like:
+
+- "Your next skill starts here"
+- "Find people ready to swap"
+- "Learn, practise, and trade knowledge"
+- "Build a profile people can say yes to"
+
+Avoid generic marketplace copy when a more specific learning-network phrase fits.

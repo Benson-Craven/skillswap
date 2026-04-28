@@ -133,14 +133,14 @@ export default function AuthForm({ mode }: AuthFormProps) {
   return (
     <div className="brand-container grid min-h-screen items-center gap-10 py-10 lg:grid-cols-[0.92fr_1.08fr]">
       <aside className="hidden lg:block">
-        <Link href="/" className="text-2xl font-black text-[var(--brand-ink)]">
+        <Link href="/" className="text-2xl font-black text-(--brand-ink)">
           SkillSwap
         </Link>
         <p className="brand-kicker mt-14">{isSignup ? 'Start swapping' : 'Welcome back'}</p>
-        <h1 className="mt-4 max-w-xl text-6xl font-black leading-[0.96] text-[var(--brand-ink)]">
+        <h1 className="mt-4 max-w-xl text-6xl font-black leading-[0.96] text-(--brand-ink)">
           {isSignup ? 'Your next skill starts here' : "Let's get you connected"}
         </h1>
-        <p className="mt-6 max-w-lg text-lg font-medium leading-8 text-[var(--brand-muted)]">
+        <p className="mt-6 max-w-lg text-lg font-medium leading-8 text-(--brand-muted)">
           {isSignup
             ? 'Create a profile, list what you can teach, and discover people ready to trade knowledge.'
             : 'Pick up where you left off and keep building your learning network.'}
@@ -156,28 +156,28 @@ export default function AuthForm({ mode }: AuthFormProps) {
 
       <div className="w-full max-w-md justify-self-center">
         <div className="mb-8 flex items-center justify-between lg:hidden">
-          <Link href="/" className="text-2xl font-black text-[var(--brand-ink)]">
+          <Link href="/" className="text-2xl font-black text-(--brand-ink)">
             SkillSwap
           </Link>
         </div>
 
         <div className="brand-card p-6 sm:p-8">
           <p className="brand-kicker">{isSignup ? 'Create account' : 'Log in'}</p>
-          <h2 className="mt-3 text-3xl font-black leading-tight text-[var(--brand-ink)]">
+          <h2 className="mt-3 text-3xl font-black leading-tight text-(--brand-ink)">
             {mode === 'login' ? 'Sign in to SkillSwap' : 'Join the skill network'}
           </h2>
-          <p className="mt-3 text-sm font-medium text-[var(--brand-muted)]">
+          <p className="mt-3 text-sm font-medium text-(--brand-muted)">
             {mode === 'login' ? (
               <>
                 New here?{' '}
-                <Link href="/auth/signup" className="font-extrabold text-[var(--brand-blue)] hover:text-[var(--brand-blue-dark)]">
+                <Link href="/auth/signup" className="font-extrabold text-(--brand-blue) hover:text-(--brand-blue-dark)">
                   Create an account
                 </Link>
               </>
             ) : (
               <>
                 Already have an account?{' '}
-                <Link href="/auth/login" className="font-extrabold text-[var(--brand-blue)] hover:text-[var(--brand-blue-dark)]">
+                <Link href="/auth/login" className="font-extrabold text-(--brand-blue) hover:text-(--brand-blue-dark)">
                   Log in
                 </Link>
               </>
@@ -191,7 +191,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
                   Full name
                 </label>
                 <div className="relative">
-                  <UserRound className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[var(--brand-muted)]" />
+                  <UserRound className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-(--brand-muted)" />
                 <input
                   id="fullName"
                   name="fullName"
@@ -211,7 +211,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
                 Email address
               </label>
               <div className="relative">
-                <Mail className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[var(--brand-muted)]" />
+                <Mail className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-(--brand-muted)" />
               <input
                 id="email"
                 name="email"
@@ -231,7 +231,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
                 Password
               </label>
               <div className="relative">
-                <LockKeyhole className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[var(--brand-muted)]" />
+                <LockKeyhole className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-(--brand-muted)" />
               <input
                 id="password"
                 name="password"
@@ -247,13 +247,13 @@ export default function AuthForm({ mode }: AuthFormProps) {
             </div>
 
           {error && (
-            <div className="rounded-[8px] border border-red-200 bg-red-50 p-4">
+            <div className="rounded-lg border border-red-200 bg-red-50 p-4">
               <div className="text-sm font-semibold text-red-700">{error}</div>
             </div>
           )}
 
           {message && (
-            <div className="rounded-[8px] border border-green-200 bg-green-50 p-4">
+            <div className="rounded-lg border border-green-200 bg-green-50 p-4">
               <div className="text-sm font-semibold text-green-800">{message}</div>
             </div>
           )}
@@ -272,10 +272,10 @@ export default function AuthForm({ mode }: AuthFormProps) {
           <div className="mt-6">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-[var(--brand-border)]" />
+                  <div className="w-full border-t border-(--brand-border)" />
               </div>
               <div className="relative flex justify-center text-sm">
-                  <span className="bg-[var(--brand-surface)] px-3 font-bold text-[var(--brand-muted)]">Or continue with</span>
+                  <span className="bg-(--brand-surface) px-3 font-bold text-(--brand-muted)">Or continue with</span>
               </div>
             </div>
 
